@@ -1,28 +1,3 @@
-		+--------------------------------------------------------------------------------------------------------+
-		|													 |
-		|				réalisé par (binôme ) :					 		 |
-		|													 |
-		|													 |										     
-		|													 |
-		|			nom    :  Moulati         nom    : Elhidaoui  					 |
-		|													 |
-		|			prénom :  Mehdi		  prénom : Saad						 |
-		|													 |
-		|													 |
-		|			Groupe : 3(nb Group de mini projet)		Filière : SIR			 |
-		|											                 |
-		|												         |
-		|											                 |
-		+--------------------------------------------------------------------------------------------------------+
-
-
-
-
-
-
-
-
-
 	todolist - gestion des taches dans un list 
 	
 		todolist [OPTION]... [number] [string]
