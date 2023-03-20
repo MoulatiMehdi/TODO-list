@@ -1,0 +1,343 @@
+#!/bin/bash
+# le dossier ou on enregistre nos listes
+directory="$HOME/.lists"
+fichier=
+
+
+
+
+
+
+
+# cette fonction teste si la tache existe dans la liste
+function is_exist
+{
+	#calcule le nombre de ligne aui contiennent notre tache
+	v=$( grep -c "^$1$" "$2"  )
+	if [ "$v" -eq 0 ]; then  return 0
+	else  return 1
+	
+	fi
+}
+
+
+
+
+
+
+#cette nous permet d'qjouter une tache a notre liste
+function add_to_list
+{
+	#la position de notre tache
+	number=$1
+
+	#la parametre de la tache
+	string=$2
+
+	#le nombre de taches existqntes dans notre liste
+	max_line=$( wc -l < "$fichier" )
+	
+	#teste si le numero donne a notre tache est superieur a le nombre max de taches dans la liste
+	if [ "$max_line" -lt "$number" ] ; then
+		echo "todo: add: \"$string\" is added at the end of the list ( line: $(( max_line +1 ))) "
+	elif [ "$number" -lt 1 ] ; then 
+		echo "todo: add: \"$string\" is added at the beginning of the list( line: 1) "
+		number=1
+	else
+		echo  "todo: add:  \"$string\" is added to the list at  the position $number."
+	fi
+  	
+	#prendre toutes les taches apres notre tache dans un fichier .cache.txt
+ 	sed -n "$number,${max_line}p" "$fichier" > ~/.cache.txt
+	
+	#supprimer ces taches 
+  	sed -i "$number,${max_line}d" "$fichier"
+	
+	#ajouter notre tache
+  	echo "$string" >> $fichier
+	
+	#reajouter les derniere tache dans la liste
+  	cat ~/.cache.txt >> "$fichier"
+}
+
+
+
+
+
+
+#fonction qui teste les parametre a ajouter \ gestion d'erreur
+function Add
+{	
+	# creer des variable locales pour la tache et la position
+	local number string
+	# on peut entrer la position premierement puis la tache ou l'inverse
+	if [[ $1 =~ [[:digit:]] ]] ; then
+		number=$1
+		string=$2
+	elif [[ $2 =~ [[:digit:]] ]]  ; then	
+		number=$2
+		string=$1
+	#sinon on va lui demender d'entrer la position
+	else
+		echo "todo: add: the position of the task is missing." 1>&2
+		
+		while ! [[ $number =~ [[:digit:]] ]] ; do
+			read -p "add: enter the position : " number
+		done
+		
+	fi
+	
+	#si le string est vide
+	while  [ -z "$string" ] ; do
+		read -p "add: enter a task : " string
+	done
+	
+	#prendre le return de la fonction et la mettre dans la variable check
+	is_exist "$string" "$fichier"
+	check=$? 
+	
+	#si check egale a 0 on ajoute notre tache a la liste
+	if [ $check -eq 0 ] ; then 
+		add_to_list "$number" "$string"
+	
+	#si check egal a 1 on affiche la tache et on lui demande si il veut la changer avec la nouvelle
+	else
+		#on affecte la postion de la tache dans une variable
+		nb=$( awk "/^$string$/{print NR}" $fichier | awk ' END { print $0 }' )
+		
+		echo "todo: add: \"$string\" : Task already exist at the position \"$nb\"."
+		
+		while ! [[ $number =~  [[:digit:]] ]] ; do 
+			read -p "Would you like to change the position of the task to  $number ? [y/n]: " check
+		done
+		# on rend la valeur de check miniscule
+		 check=${check,,}
+		
+		#si cette valeur commence par n donc il change rien
+		if [[ $check =~ ^n ]] ; then
+			 echo ""
+		
+		#sinon il change l'ancienne tache par la nouvelle
+		else
+			
+			#supprime toute repetition
+			sed -i "/^$string$/d" "$fichier"
+			
+			#ajoute lq tqche q lq liste
+			add_to_list "$number" "$string"
+			
+		fi
+	fi
+}
+
+
+
+
+
+
+#fonction d'affichage des listes
+function List
+{
+
+	#supprime le chemin affiche la liste
+	if [ -s $fichier ] ; then 
+
+    	echo " $( basename "$1" ) list"
+    	echo "---------------------"
+	
+		awk '{ print NR"-"$0 }' < "$1"
+	else
+		echo "todo: list: \"$1\" the list is empty " >&2
+	fi
+	
+}
+
+
+
+
+
+
+
+# fonction de supression des taches
+function MissionComplete
+{
+	#le premier parametre donne 
+	number=$1
+	
+	#si la taille de notre listes est vide
+	if [ ! -s $fichier ]  ; then
+		#afficher le msg d'erreur
+		echo "todo: done: no task exists in the list." >&2
+	
+	#si le parametre est un nombre il fait rien
+	elif [[ $number =~ [[:digit:]] ]] ; then 
+		echo ""
+	
+	#sinon il affiche erreur et lui dememde de saisir le nombre
+	else
+		#affiche la list
+		List $fichier
+		echo -e "\n"
+		
+		while ! [[ $number =~ [[:digit:]] ]] ; do 
+			read -p "todo: done : enter the position of the task :" number
+		done
+	fi
+	
+	if [ -s $fichier ]; then
+		
+		#affecter la tache dans la variable string
+		string=$( sed -n "${number}p" $fichier )
+	
+		#supprimer la tache
+		sed -i "${number}d" $fichier
+	
+		echo "todo: done: the task \"$string\" is done."
+	fi
+}
+
+
+
+
+
+
+
+#creer le dossier contient touts les listes 
+if [ ! -d "$directory" ] ; then
+	mkdir "$directory"
+ 	
+elif [ ! -w "$directory" ] ; then
+	chmod u+w "$directory"
+
+elif [ ! -r "$directory" ] ; then
+	chmod u+r "$directory"
+elif [ ! -x "$directory" ] ; then
+	chmod u+x "$directory"
+fi
+
+
+
+
+
+#si le dossier est plein on l'afficher
+	sizedir=$( ls -A1 $directory | wc -l )
+	echo size=$sizedir
+	
+if [ "$sizedir" -ne 0 ] ; then
+	echo "        listes :"
+	echo "----------------------"
+	 ls -1 "$directory"
+	 echo -e "\n" 
+	#on lui demande de donner le nom de la liste
+	while [ -z "$fichier" ] ; do 
+		read -p "choose a list (if no list found it will be created automatically ) : " fichier
+	done
+	echo -e "\n"
+#si le dossier est vide on lui demande de creer une liste
+else
+	fichier=
+	echo "todo: no list exist in the directory."
+	while [ -z $fichier ] ; do
+		read -p "enter a new list name : " fichier
+	done
+fi
+
+
+
+
+
+
+#on affecte le nom de la liste saisie sans chemin dans la variable fichier
+
+fichier="$directory/$(basename $fichier )"
+
+#on teste si le fichier existe deja
+#s'il n'existe pas dans le repertoire on le cree
+if [ ! -f $fichier ] ; then
+	
+	fichier=$directory/$( basename $fichier)
+	touch $fichier
+
+#s4il existe mais on ne peut pas le modifier	
+elif [ ! -w $fichier ] || [ ! -r $fichier ]; then
+    
+	chmod u+rw $fichier
+fi
+
+
+
+
+
+
+
+#on declare 2 tableaux
+
+declare -A tab
+declare -A nb_element
+
+#deux compteurs
+i=0
+j=0
+
+#deux variables representantes le nom et position des taches
+number=0
+string=0
+
+#mettre chaque dans le tableau
+for v in "$@" ; do
+	
+	if [ "$v" == "list" ] || [ "$v" == "add" ] || [ "$v" == "done" ] ; then	
+		i=$(( i + 1 ))
+		j=0
+	elif [ $i -eq 0 ] ; then 
+		
+		echo "todo: \"$v\": unknown option." >&2
+	
+	fi
+    
+	tab[$i,$j]="$v"
+    j=$(( j +1 ))
+	nb_element[$i]=$j
+
+done 
+
+lines=$(( i ))
+
+
+
+
+
+#on fait l'appel aux fonctions
+for (( i=1 ; i<=lines ; i++ )) ; do
+
+	for (( j=0 ; j<nb_element[$i] ; j++ )) ; do 
+						
+			if [ "${tab[$i,$j]}" == "list" ] ; then
+    
+            	List $fichier
+    			continue
+	        fi
+			
+			if [ "${tab[$i,0]}" == "done" -o "${tab[$i,0]}" == "add" ]  ; then 
+				
+				if [ $j -eq  0 ]; then 
+					j=1
+				fi
+
+				if [ "${tab[$i,0]}" == "done" ] ; then 
+				
+					MissionComplete "${tab[$i,$j]}"
+			
+				elif [ "${tab[$i,0]}" == "add" ] ; then
+				
+					Add "${tab[$i,$j]}" "${tab[$i,$(( j + 1 ))]}"
+					j=$(( j + 1))
+				fi
+			else
+				
+				echo "todo: \"${tab[$i,$j]}\": unknown option." >&2
+			
+			fi
+	done
+	
+done
