@@ -33,7 +33,8 @@ const notifyMe = ({title,body,icon}) => {
 
 let table   = document.getElementById("index_meetings")
 if (table) {
-    
+   
+
     let rows = table.rows
     let spaceFound = false
 
@@ -46,8 +47,12 @@ if (table) {
             break;
 
         }
-    }
-
+    }	
+	try{
+         console.log(document.getElementsByTagName("iframe"))
+         document.getElementsByClassName("recaptcha-checkbox-checkmark")[0].click()
+	}catch(err){
+	}
     if (!spaceFound) {
         console.log("bruh, no space is found.")
         console.log("the page will be reload after 1 minute.")
